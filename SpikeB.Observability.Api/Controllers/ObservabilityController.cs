@@ -1,21 +1,30 @@
 using Microsoft.AspNetCore.Mvc;
+using SpikeB.Observability.Api.Clients;
 
 namespace SpikeB.Observability.Api.Controllers;
 
 [ApiController]
 [Route("api/observability")]
-public class ObservabilityController(IHttpClientFactory httpClientFactory) : ControllerBase
+public class ObservabilityController(
+    DownstreamCollectClient collectClient) : ControllerBase
 {
     [HttpGet("collect")]
-    public async Task<IActionResult> GetCollect()
+    public async Task<IActionResult> GetCollect(
+        CancellationToken cancellationToken)
     {
-        var client = httpClientFactory.CreateClient();
+        var result = await collectClient.GetStatusAsync(
+            cancellationToken);
 
-        var response = await client.GetAsync(
-            "https://jsonplaceholder.typicode.com/todos/1");
+        return Ok(result);
+    }
 
-        var content = await response.Content.ReadAsStringAsync();
+    [HttpGet("todo")]
+    public async Task<IActionResult> GetTodo(
+        CancellationToken cancellationToken)
+    {
+        var result = await collectClient.GetTodoAsync(
+            cancellationToken);
 
-        return Ok(content);
+        return Content(result, "application/json");
     }
 }
