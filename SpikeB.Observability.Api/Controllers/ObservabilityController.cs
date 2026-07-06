@@ -12,8 +12,7 @@ public class ObservabilityController(
     public async Task<IActionResult> GetCollect(
         CancellationToken cancellationToken)
     {
-        var result = await collectClient.GetStatusAsync(
-            cancellationToken);
+        var result = await collectClient.GetStatusAsync(cancellationToken);
 
         return Ok(result);
     }
@@ -22,9 +21,35 @@ public class ObservabilityController(
     public async Task<IActionResult> GetTodo(
         CancellationToken cancellationToken)
     {
-        var result = await collectClient.GetTodoAsync(
-            cancellationToken);
+        var result = await collectClient.GetTodoAsync(cancellationToken);
 
         return Content(result, "application/json");
+    }
+
+    [HttpGet("slow")]
+    public async Task<IActionResult> GetSlow(
+        CancellationToken cancellationToken)
+    {
+        var result = await collectClient.GetSlowResponseAsync(cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpGet("error")]
+    public async Task<IActionResult> GetError(
+        CancellationToken cancellationToken)
+    {
+        var result = await collectClient.GetFailingResponseAsync(cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpGet("chain")]
+    public async Task<IActionResult> GetChain(
+        CancellationToken cancellationToken)
+    {
+        var result = await collectClient.GetChainedResponseAsync(cancellationToken);
+
+        return Ok(result);
     }
 }

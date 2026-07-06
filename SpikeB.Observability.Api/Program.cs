@@ -32,7 +32,11 @@ builder.Services
     {
         tracing
             .AddSource(Observability.ActivitySourceName)
-            .AddAspNetCoreInstrumentation()
+            .AddAspNetCoreInstrumentation(options =>
+            {
+                options.Filter = context =>
+                    !context.Request.Path.StartsWithSegments("/swagger");
+            })
             .AddHttpClientInstrumentation()
             .AddConsoleExporter();
 
