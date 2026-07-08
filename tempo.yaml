@@ -17,3 +17,24 @@ storage:
 compactor:
   compaction:
     block_retention: 1h
+    
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: spike
+  storage:
+    path: /tmp/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+  processor:
+    service_graphs: {}
+    span_metrics: {}
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors:
+        - service-graphs
+        - span-metrics

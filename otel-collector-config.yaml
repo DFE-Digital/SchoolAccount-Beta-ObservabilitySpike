@@ -11,6 +11,9 @@ exporters:
     endpoint: tempo:4317
     tls:
       insecure: true
+      
+  prometheus:
+    endpoint: 0.0.0.0:8889
 
   debug:
     verbosity: detailed
@@ -20,3 +23,7 @@ service:
     traces:
       receivers: [otlp]
       exporters: [otlp/tempo, debug]
+      
+    metrics:
+      receivers: [otlp]
+      exporters: [prometheus, debug]

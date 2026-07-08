@@ -39,6 +39,7 @@
     ports:
       - "4317:4317"
       - "4318:4318"
+      - "8889:8889"
     depends_on:
       - tempo
   
@@ -49,6 +50,18 @@
       - ./tempo.yaml:/etc/tempo.yaml
     ports:
       - "3200:3200"
+    
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-remote-write-receiver"
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus.yaml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - otel-collector
 
   grafana:
     image: grafana/grafana:latest
@@ -61,3 +74,4 @@
       - ./grafana/provisioning:/etc/grafana/provisioning
     depends_on:
       - tempo
+      - prometheus
