@@ -60,3 +60,51 @@ buttons.forEach(button => {
         }
     });
 });
+
+const chaosButton = document.getElementById("run-chaos");
+
+chaosButton.addEventListener("click", async () => {
+    const started = performance.now();
+
+    buttons.forEach(x => x.disabled = true);
+    chaosButton.disabled = true;
+    chaosButton.classList.add("running");
+
+    statusText.textContent = "Running chaos traffic...";
+    output.textContent = "{}";
+
+    try {
+        const response = await fetch("/api/traffic/run", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({
+                totalRequests: 50,
+                delayMs: 200
+            })
+        });
+
+        const elapsedMs = Math.round(performance.now() - started);
+        const body = await response.json();
+
+        statusText.textContent =
+            `Chaos run completed in ${elapsedMs}ms. Success: ${body.successCount}, Failed: ${body.failureCount}.`;
+
+        output.textContent = JSON.stringify(body, null, 2);
+    } catch (error) {
+        const elapsedMs = Math.round(performance.now() - started);
+
+        statusText.textContent = `Chaos run failed after ${elapsedMs}ms.`;
+
+        output.textContent = JSON.stringify({
+            elapsedMs,
+            error: error.message
+        }, null, 2);
+    } finally {
+        chaosButton.classList.remove("running");
+        buttons.forEach(x => x.disabled = false);
+        chaosButton.disabled = false;
+    }
+});

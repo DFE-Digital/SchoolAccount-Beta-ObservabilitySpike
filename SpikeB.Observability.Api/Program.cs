@@ -34,6 +34,7 @@ builder.Services
     {
         tracing
             .AddSource(Observability.ActivitySourceName)
+            .AddSource(SimulationDiagnostics.ActivitySourceName)
             .AddAspNetCoreInstrumentation(options =>
             {
                 options.Filter = context =>

@@ -38,6 +38,7 @@ public sealed class DemoController : ControllerBase
                     <button data-url="/api/simulation/db-down">SQL down</button>
                     <button data-url="/api/simulation/ruby-down">Ruby down</button>
                     <button data-url="/api/simulation/chain">Chain</button>
+                    <button id="run-chaos" type="button">🔥 Chaos run</button>
                 </section>
 
                 <section class="result">
