@@ -1,4 +1,5 @@
 using Azure.Monitor.OpenTelemetry.Exporter;
+using Microsoft.Extensions.Http.Resilience;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using SpikeB.Observability.Api;
@@ -10,17 +11,33 @@ var appInsightsConnectionString =
     builder.Configuration["ApplicationInsights:ConnectionString"];
 
 builder.Services.AddControllers();
+builder.Services.AddRazorPages();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddHttpClient<DownstreamCollectClient>(client =>
-{
-    client.BaseAddress =
-        new Uri(builder.Configuration["Downstream:CollectBaseUrl"]!);
+builder.Services
+    .AddHttpClient<DownstreamCollectClient>(client =>
+    {
+        client.BaseAddress =
+            new Uri(builder.Configuration["Downstream:CollectBaseUrl"]!);
 
-    client.Timeout = TimeSpan.FromSeconds(5);
-});
+        // Let Polly/resilience pipeline own timeout behaviour.
+        client.Timeout = Timeout.InfiniteTimeSpan;
+    })
+    .AddStandardResilienceHandler(options =>
+    {
+        options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(10);
+
+        options.Retry.MaxRetryAttempts = 2;
+        options.Retry.Delay = TimeSpan.FromMilliseconds(250);
+
+        options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
+        options.CircuitBreaker.MinimumThroughput = 5;
+        options.CircuitBreaker.FailureRatio = 0.5;
+        options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(15);
+    });
 
 builder.Services
     .AddOpenTelemetry()
@@ -71,5 +88,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+app.MapRazorPages();
 
 app.Run();

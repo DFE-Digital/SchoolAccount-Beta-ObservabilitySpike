@@ -1,0 +1,86 @@
+@page "/demo"
+@model SpikeB.Observability.Api.Pages.DemoModel
+
+@{
+    ViewData["Title"] = "Spike B Observability Demo";
+}
+
+<link rel="stylesheet" href="~/demo.css" />
+
+<div class="console">
+
+    <header class="hero">
+        <div>
+            <h1>Spike B Observability Demo</h1>
+            <p>School Account → COLLECT → SQL</p>
+        </div>
+
+        <div class="header-status">
+            <span id="traffic-status" class="status stopped">● Stopped</span>
+            <span id="current-scenario" class="status scenario-status">Scenario: Normal</span>
+        </div>
+    </header>
+
+    <div class="layout">
+
+        <section class="card">
+            <h2>Traffic Generator</h2>
+
+            <div class="button-bar">
+                <button id="start">▶ Start</button>
+                <button id="stop" class="secondary">■ Stop</button>
+            </div>
+
+            <h3>Scenario</h3>
+
+            <div class="scenario-list">
+                <label><input type="radio" name="scenario" value="normal" checked /> Normal</label>
+                <label><input type="radio" name="scenario" value="slow" /> Slow</label>
+                <label><input type="radio" name="scenario" value="error" /> Error</label>
+                <label><input type="radio" name="scenario" value="timeout" /> Timeout</label>
+                <label><input type="radio" name="scenario" value="sql-down" /> SQL Down</label>
+                <label><input type="radio" name="scenario" value="random" /> Random</label>
+            </div>
+
+            <h3>Requests / second</h3>
+
+            <input id="rps" type="range" min="1" max="20" value="2" />
+
+            <p>
+                <strong id="rps-value">2</strong> req/sec
+            </p>
+        </section>
+
+        <section class="card">
+            <h2>Live Statistics</h2>
+
+            <table class="stats">
+                <tr><td>Requests</td><td id="requests">0</td></tr>
+                <tr><td>Successful</td><td id="success">0</td></tr>
+                <tr><td>Failed</td><td id="failed">0</td></tr>
+                <tr><td>Average latency</td><td id="latency">0 ms</td></tr>
+                <tr><td>Current RPS</td><td id="current-rps">0</td></tr>
+            </table>
+        </section>
+
+    </div>
+
+    <section class="card">
+        <h2>Recent Activity</h2>
+
+        <table class="activity">
+            <thead>
+            <tr>
+                <th>Time</th>
+                <th>Scenario</th>
+                <th>Status</th>
+                <th>Duration</th>
+            </tr>
+            </thead>
+            <tbody id="activity"></tbody>
+        </table>
+    </section>
+
+</div>
+
+<script src="~/demo.js?v=3"></script>

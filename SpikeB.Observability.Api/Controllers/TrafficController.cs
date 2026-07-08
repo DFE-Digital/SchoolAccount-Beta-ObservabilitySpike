@@ -1,114 +1,87 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using SpikeB.Observability.Api.Clients;
-using SpikeB.Observability.Api.Models;
+using SpikeB.Observability.Api.Models.Traffic;
 
 namespace SpikeB.Observability.Api.Controllers;
 
 [ApiController]
 [Route("api/traffic")]
-public sealed class TrafficController(
-    DownstreamCollectClient collectClient) : ControllerBase
+public sealed class TrafficController(DownstreamCollectClient collect) : ControllerBase
 {
-    private static readonly string[] WeightedScenarios =
-    [
-        "normal", "normal", "normal", "normal", "normal", "normal", "normal",
-        "slow",
-        "random-latency",
-        "random-failure",
-        "timeout",
-        "db-down",
-        "ruby-down"
-    ];
-
     [HttpPost("run")]
-    public async Task<IActionResult> Run(
-        [FromBody] TrafficRunRequest request,
+    public async Task<ActionResult<TrafficResponse>> Run(
+        [FromBody] TrafficRequest request,
         CancellationToken cancellationToken)
     {
-        var totalRequests = Math.Clamp(request.TotalRequests, 1, 250);
-        var delayMs = Math.Clamp(request.DelayMs, 0, 5_000);
-
-        var results = new List<TrafficRequestResult>();
-
-        for (var i = 1; i <= totalRequests; i++)
-        {
-            var scenario = WeightedScenarios[Random.Shared.Next(WeightedScenarios.Length)];
-
-            var result = await ExecuteScenarioAsync(
-                i,
-                scenario,
-                cancellationToken);
-
-            results.Add(result);
-
-            if (delayMs > 0 && i < totalRequests)
-            {
-                await Task.Delay(delayMs, cancellationToken);
-            }
-        }
-
-        return Ok(new TrafficRunResult(
-            TotalRequests: totalRequests,
-            SuccessCount: results.Count(x => x.Success),
-            FailureCount: results.Count(x => !x.Success),
-            Results: results));
-    }
-
-    private async Task<TrafficRequestResult> ExecuteScenarioAsync(
-        int number,
-        string scenario,
-        CancellationToken cancellationToken)
-    {
+        var scenario = NormaliseScenario(request.Scenario);
         var stopwatch = Stopwatch.StartNew();
 
         try
         {
-            var response = scenario switch
-            {
-                "normal" => await collectClient.NormalAsync(cancellationToken),
-                "slow" => await collectClient.SlowAsync(cancellationToken),
-                "random-latency" => await collectClient.RandomLatencyAsync(cancellationToken),
-                "random-failure" => await collectClient.RandomFailureAsync(cancellationToken),
-                "timeout" => await collectClient.TimeoutAsync(cancellationToken),
-                "db-down" => await collectClient.DbDownAsync(cancellationToken),
-                "ruby-down" => await collectClient.RubyDownAsync(cancellationToken),
-                _ => await collectClient.NormalAsync(cancellationToken)
-            };
+            await RunScenarioAsync(scenario, cancellationToken);
 
             stopwatch.Stop();
 
-            return new TrafficRequestResult(
-                Number: number,
-                Scenario: scenario,
-                StatusCode: StatusCodes.Status200OK,
-                Success: true,
-                ElapsedMs: stopwatch.ElapsedMilliseconds,
-                Message: response);
+            return Ok(new TrafficResponse(
+                scenario,
+                StatusCodes.Status200OK,
+                true,
+                stopwatch.ElapsedMilliseconds,
+                "Completed"));
         }
-        catch (TaskCanceledException)
+        catch (Exception ex)
         {
             stopwatch.Stop();
 
-            return new TrafficRequestResult(
-                Number: number,
-                Scenario: scenario,
-                StatusCode: StatusCodes.Status504GatewayTimeout,
-                Success: false,
-                ElapsedMs: stopwatch.ElapsedMilliseconds,
-                Message: "The COLLECT dependency timed out.");
+            return Ok(new TrafficResponse(
+                scenario,
+                StatusCodes.Status500InternalServerError,
+                false,
+                stopwatch.ElapsedMilliseconds,
+                ex.Message));
         }
-        catch (HttpRequestException ex)
-        {
-            stopwatch.Stop();
+    }
 
-            return new TrafficRequestResult(
-                Number: number,
-                Scenario: scenario,
-                StatusCode: StatusCodes.Status502BadGateway,
-                Success: false,
-                ElapsedMs: stopwatch.ElapsedMilliseconds,
-                Message: ex.Message);
+    private Task RunScenarioAsync(
+        string scenario,
+        CancellationToken cancellationToken)
+    {
+        return scenario switch
+        {
+            "slow" => collect.SlowAsync(cancellationToken),
+            "error" => collect.ErrorAsync(cancellationToken),
+            "timeout" => collect.TimeoutAsync(cancellationToken),
+            "random-latency" => collect.RandomLatencyAsync(cancellationToken),
+            "random-failure" => collect.RandomFailureAsync(cancellationToken),
+            "sql-down" => collect.DbDownAsync(cancellationToken),
+            "ruby-down" => collect.RubyDownAsync(cancellationToken),
+            "chain" => collect.ChainAsync(cancellationToken),
+            "random" => RunRandomScenarioAsync(cancellationToken),
+            _ => collect.NormalAsync(cancellationToken)
+        };
+    }
+
+    private Task RunRandomScenarioAsync(CancellationToken cancellationToken)
+    {
+        var roll = Random.Shared.Next(1, 101);
+
+        return roll switch
+        {
+            <= 70 => collect.NormalAsync(cancellationToken),
+            <= 85 => collect.SlowAsync(cancellationToken),
+            <= 95 => collect.ErrorAsync(cancellationToken),
+            _ => collect.DbDownAsync(cancellationToken)
+        };
+    }
+
+    private static string NormaliseScenario(string? scenario)
+    {
+        if (string.IsNullOrWhiteSpace(scenario))
+        {
+            return "normal";
         }
+
+        return scenario.Trim().ToLowerInvariant();
     }
 }

@@ -1,110 +1,161 @@
-const buttons = document.querySelectorAll("button[data-url]");
-const output = document.getElementById("output");
-const statusText = document.getElementById("status");
+const startButton = document.getElementById("start");
+const stopButton = document.getElementById("stop");
 
-buttons.forEach(button => {
-    button.addEventListener("click", async () => {
-        const url = button.dataset.url;
-        const label = button.textContent.trim();
-        const started = performance.now();
+const trafficStatus = document.getElementById("traffic-status");
+const scenarioLabel = document.getElementById("current-scenario");
 
-        buttons.forEach(x => x.disabled = true);
-        button.classList.add("running");
+const requestsLabel = document.getElementById("requests");
+const successLabel = document.getElementById("success");
+const failedLabel = document.getElementById("failed");
+const latencyLabel = document.getElementById("latency");
+const currentRpsLabel = document.getElementById("current-rps");
 
-        statusText.textContent = `Running ${label}...`;
-        output.textContent = "{}";
+const activity = document.getElementById("activity");
 
-        try {
-            const response = await fetch(url, {
-                method: "GET",
-                headers: {
-                    "Accept": "application/json"
-                }
-            });
+const rpsSlider = document.getElementById("rps");
+const rpsValue = document.getElementById("rps-value");
 
-            const elapsedMs = Math.round(performance.now() - started);
-            const text = await response.text();
+let timer = null;
 
-            let body;
+let totalRequests = 0;
+let successfulRequests = 0;
+let failedRequests = 0;
+let totalLatency = 0;
 
-            try {
-                body = JSON.parse(text);
-            } catch {
-                body = text;
-            }
+rpsSlider.addEventListener("input", () => {
+    rpsValue.innerText = rpsSlider.value;
 
-            statusText.textContent = `${label} completed with HTTP ${response.status} in ${elapsedMs}ms.`;
-
-            output.textContent = JSON.stringify({
-                scenario: label,
-                requestUrl: url,
-                status: response.status,
-                ok: response.ok,
-                elapsedMs,
-                body
-            }, null, 2);
-        } catch (error) {
-            const elapsedMs = Math.round(performance.now() - started);
-
-            statusText.textContent = `${label} failed after ${elapsedMs}ms.`;
-
-            output.textContent = JSON.stringify({
-                scenario: label,
-                requestUrl: url,
-                elapsedMs,
-                error: error.message
-            }, null, 2);
-        } finally {
-            button.classList.remove("running");
-            buttons.forEach(x => x.disabled = false);
-        }
-    });
+    if (timer !== null) {
+        stopTraffic();
+        startTraffic();
+    }
 });
 
-const chaosButton = document.getElementById("run-chaos");
+document
+    .querySelectorAll("input[name=scenario]")
+    .forEach(radio => {
+        radio.addEventListener("change", () => {
+            scenarioLabel.textContent = `Scenario: ${formatScenario(radio.value)}`;
+        });
+    });
 
-chaosButton.addEventListener("click", async () => {
+startButton.addEventListener("click", startTraffic);
+stopButton.addEventListener("click", stopTraffic);
+
+function startTraffic() {
+    if (timer !== null) return;
+
+    const rps = Number(rpsSlider.value);
+
+    currentRpsLabel.innerText = rps;
+    trafficStatus.textContent = "● Running";
+    trafficStatus.className = "status running";
+
+    timer = setInterval(sendRequest, 1000 / rps);
+}
+
+function stopTraffic() {
+    clearInterval(timer);
+    timer = null;
+
+    currentRpsLabel.innerText = "0";
+    trafficStatus.textContent = "● Stopped";
+    trafficStatus.className = "status stopped";
+}
+
+async function sendRequest() {
+    const scenario = getSelectedScenario();
     const started = performance.now();
-
-    buttons.forEach(x => x.disabled = true);
-    chaosButton.disabled = true;
-    chaosButton.classList.add("running");
-
-    statusText.textContent = "Running chaos traffic...";
-    output.textContent = "{}";
 
     try {
         const response = await fetch("/api/traffic/run", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
+                "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                totalRequests: 50,
-                delayMs: 200
-            })
+            body: JSON.stringify({ scenario })
         });
 
-        const elapsedMs = Math.round(performance.now() - started);
-        const body = await response.json();
+        const result = await response.json();
+        const duration = Math.round(performance.now() - started);
 
-        statusText.textContent =
-            `Chaos run completed in ${elapsedMs}ms. Success: ${body.successCount}, Failed: ${body.failureCount}.`;
+        totalRequests++;
 
-        output.textContent = JSON.stringify(body, null, 2);
-    } catch (error) {
-        const elapsedMs = Math.round(performance.now() - started);
+        if (result.success) {
+            successfulRequests++;
+        } else {
+            failedRequests++;
+        }
 
-        statusText.textContent = `Chaos run failed after ${elapsedMs}ms.`;
+        totalLatency += duration;
 
-        output.textContent = JSON.stringify({
-            elapsedMs,
-            error: error.message
-        }, null, 2);
-    } finally {
-        chaosButton.classList.remove("running");
-        buttons.forEach(x => x.disabled = false);
-        chaosButton.disabled = false;
+        refreshStats();
+
+        addActivity(
+            scenario,
+            result.statusCode,
+            duration,
+            result.success);
     }
-});
+    catch {
+        const duration = Math.round(performance.now() - started);
+
+        totalRequests++;
+        failedRequests++;
+        totalLatency += duration;
+
+        refreshStats();
+
+        addActivity(
+            scenario,
+            "FAIL",
+            duration,
+            false);
+    }
+}
+
+function refreshStats() {
+    requestsLabel.innerText = totalRequests;
+    successLabel.innerText = successfulRequests;
+    failedLabel.innerText = failedRequests;
+
+    latencyLabel.innerText =
+        `${Math.round(totalLatency / totalRequests)} ms`;
+}
+
+function addActivity(scenario, status, duration, success) {
+    const row = document.createElement("tr");
+
+    const css = success
+        ? "success"
+        : "failure";
+
+    row.innerHTML = `
+        <td>${new Date().toLocaleTimeString()}</td>
+        <td>${formatScenario(scenario)}</td>
+        <td class="${css}">${status}</td>
+        <td>${duration} ms</td>
+    `;
+
+    activity.prepend(row);
+
+    while (activity.children.length > 100) {
+        activity.removeChild(activity.lastChild);
+    }
+}
+
+function getSelectedScenario() {
+    return document.querySelector("input[name=scenario]:checked").value;
+}
+
+function formatScenario(value) {
+    return value
+        .replace("-", " ")
+        .replace(/\b\w/g, l => l.toUpperCase());
+}
+
+
+rpsSlider.value = 2;
+rpsValue.innerText = "2";
+scenarioLabel.textContent = "Scenario: Normal";
+startTraffic();
