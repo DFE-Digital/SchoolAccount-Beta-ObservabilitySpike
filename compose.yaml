@@ -1,4 +1,19 @@
 ﻿services:
+  student-records-api:
+    image: student-records-api
+    build:
+      context: .
+      dockerfile: StudentRecords.Api/Dockerfile
+    ports:
+      - "5040:8080"
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+    depends_on:
+      - otel-collector
+
   collect-api:
     image: collect-api
     build:
@@ -9,10 +24,12 @@
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
+      Downstream__StudentRecordsBaseUrl: http://student-records-api:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     depends_on:
       - otel-collector
+      - student-records-api
 
   school-account-api:
     image: school-account-api
@@ -30,7 +47,7 @@
     depends_on:
       - collect-api
       - otel-collector
-  
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     command: [ "--config=/etc/otelcol/config.yaml" ]
@@ -42,22 +59,22 @@
       - "8889:8889"
     depends_on:
       - tempo
-  
+
   tempo:
     image: grafana/tempo:2.6.1
-    command: ["-config.file=/etc/tempo.yaml"]
+    command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
       - ./tempo.yaml:/etc/tempo.yaml
     ports:
       - "3200:3200"
-    
+
   prometheus:
     image: prom/prometheus:latest
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--web.enable-remote-write-receiver"
     volumes:
-      - ./prometheus.yaml:/etc/prometheus.yaml
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     depends_on:
