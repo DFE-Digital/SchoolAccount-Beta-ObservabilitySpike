@@ -18,6 +18,8 @@ builder.Services.AddHttpClient<DownstreamCollectClient>(client =>
 {
     client.BaseAddress =
         new Uri(builder.Configuration["Downstream:CollectBaseUrl"]!);
+
+    client.Timeout = TimeSpan.FromSeconds(5);
 });
 
 builder.Services
