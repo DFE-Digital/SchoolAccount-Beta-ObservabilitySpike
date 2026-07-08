@@ -62,6 +62,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseStaticFiles();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/", () => Results.Redirect("/demo"));
+}
+
 app.MapControllers();
 
 app.Run();
