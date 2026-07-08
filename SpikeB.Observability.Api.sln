@@ -1,9 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# 
+#
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpikeB.Observability.Api", "SpikeB.Observability.Api\SpikeB.Observability.Api.csproj", "{7E127D71-A7AF-427A-9DB8-53A783CEADE9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Collect.Api", "Collect.Api\Collect.Api.csproj", "{E465C43B-66B5-4041-A7AD-ACA083D97161}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{84F283CD-1327-40D7-AC3F-3C4B06B3C499}"
+	ProjectSection(SolutionItems) = preProject
+		compose.yaml = compose.yaml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
