@@ -38,7 +38,8 @@ builder.Services
                     !context.Request.Path.StartsWithSegments("/swagger");
             })
             .AddHttpClientInstrumentation()
-            .AddConsoleExporter();
+            .AddConsoleExporter()
+            .AddOtlpExporter();
 
         if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
         {

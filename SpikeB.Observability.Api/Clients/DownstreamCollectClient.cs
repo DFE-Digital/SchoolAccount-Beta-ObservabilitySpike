@@ -7,70 +7,80 @@ public sealed class DownstreamCollectClient(
     public async Task<object> GetStatusAsync(CancellationToken cancellationToken)
     {
         using var activity =
-            Observability.ActivitySource.StartActivity("COLLECT Health Check");
+            Observability.ActivitySource.StartActivity("COLLECT Normal Call");
 
-        activity?.SetTag("downstream.service", "jsonplaceholder");
+        activity?.SetTag("downstream.service", "collect-api");
         activity?.SetTag("spike", "spike-b");
+        activity?.SetTag("scenario", "normal");
 
-        var response = await httpClient.GetAsync("/todos/1", cancellationToken);
+        var response = await httpClient.GetAsync("/api/collect/normal", cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         activity?.SetTag("http.status_code", (int)response.StatusCode);
         activity?.SetTag("downstream.success", response.IsSuccessStatusCode);
 
-        logger.LogInformation(
-            "Downstream service returned {StatusCode}",
-            response.StatusCode);
+        logger.LogInformation("Collect.Api returned {StatusCode}", response.StatusCode);
 
         return new
         {
-            Service = "jsonplaceholder",
+            Service = "collect-api",
+            Scenario = "normal",
             StatusCode = (int)response.StatusCode,
-            Success = response.IsSuccessStatusCode
+            Success = response.IsSuccessStatusCode,
+            Response = body
         };
     }
 
     public async Task<string> GetTodoAsync(CancellationToken cancellationToken)
     {
         using var activity =
-            Observability.ActivitySource.StartActivity("Get Todo Item");
+            Observability.ActivitySource.StartActivity("COLLECT Normal Payload Call");
 
-        activity?.SetTag("downstream.service", "jsonplaceholder");
+        activity?.SetTag("downstream.service", "collect-api");
         activity?.SetTag("spike", "spike-b");
+        activity?.SetTag("scenario", "normal");
 
-        return await httpClient.GetStringAsync("/todos/1", cancellationToken);
+        return await httpClient.GetStringAsync("/api/collect/normal", cancellationToken);
     }
 
     public async Task<object> GetSlowResponseAsync(CancellationToken cancellationToken)
     {
         using var activity =
-            Observability.ActivitySource.StartActivity("Simulated Slow Downstream Call");
+            Observability.ActivitySource.StartActivity("COLLECT Slow Call");
 
-        activity?.SetTag("downstream.service", "simulated-collect");
+        activity?.SetTag("downstream.service", "collect-api");
         activity?.SetTag("spike", "spike-b");
         activity?.SetTag("scenario", "slow-response");
 
-        await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+        var response = await httpClient.GetAsync("/api/collect/slow", cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        activity?.SetTag("http.status_code", (int)response.StatusCode);
+        activity?.SetTag("downstream.success", response.IsSuccessStatusCode);
 
         return new
         {
-            Service = "simulated-collect",
+            Service = "collect-api",
             Scenario = "slow-response",
-            DelayMs = 3000
+            StatusCode = (int)response.StatusCode,
+            Success = response.IsSuccessStatusCode,
+            Response = body
         };
     }
 
     public async Task<object> GetFailingResponseAsync(CancellationToken cancellationToken)
     {
         using var activity =
-            Observability.ActivitySource.StartActivity("Simulated Failing Downstream Call");
+            Observability.ActivitySource.StartActivity("COLLECT Failing Call");
 
-        activity?.SetTag("downstream.service", "simulated-collect");
+        activity?.SetTag("downstream.service", "collect-api");
         activity?.SetTag("spike", "spike-b");
         activity?.SetTag("scenario", "error-response");
 
         try
         {
-            var response = await httpClient.GetAsync("/invalid-endpoint", cancellationToken);
+            var response = await httpClient.GetAsync("/api/collect/error", cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
             activity?.SetTag("http.status_code", (int)response.StatusCode);
             activity?.SetTag("downstream.success", response.IsSuccessStatusCode);
@@ -79,8 +89,10 @@ public sealed class DownstreamCollectClient(
 
             return new
             {
-                Service = "simulated-collect",
-                StatusCode = (int)response.StatusCode
+                Service = "collect-api",
+                Scenario = "error-response",
+                StatusCode = (int)response.StatusCode,
+                Response = body
             };
         }
         catch (Exception ex)
@@ -89,7 +101,7 @@ public sealed class DownstreamCollectClient(
             activity?.SetTag("exception.type", ex.GetType().Name);
             activity?.SetTag("exception.message", ex.Message);
 
-            logger.LogError(ex, "Simulated downstream failure");
+            logger.LogError(ex, "Collect.Api downstream failure");
 
             throw;
         }
@@ -98,25 +110,25 @@ public sealed class DownstreamCollectClient(
     public async Task<object> GetChainedResponseAsync(CancellationToken cancellationToken)
     {
         using var activity =
-            Observability.ActivitySource.StartActivity("Chained Downstream Call");
+            Observability.ActivitySource.StartActivity("COLLECT Chained Call");
 
-        activity?.SetTag("downstream.service", "jsonplaceholder");
+        activity?.SetTag("downstream.service", "collect-api");
         activity?.SetTag("spike", "spike-b");
         activity?.SetTag("scenario", "service-chain");
 
-        var todo = await httpClient.GetStringAsync("/todos/1", cancellationToken);
-        var user = await httpClient.GetStringAsync("/users/1", cancellationToken);
+        var response = await httpClient.GetAsync("/api/collect/chain", cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        activity?.SetTag("http.status_code", (int)response.StatusCode);
+        activity?.SetTag("downstream.success", response.IsSuccessStatusCode);
 
         return new
         {
+            Service = "collect-api",
             Scenario = "service-chain",
-            ServicesCalled = new[]
-            {
-                "/todos/1",
-                "/users/1"
-            },
-            TodoLength = todo.Length,
-            UserLength = user.Length
+            StatusCode = (int)response.StatusCode,
+            Success = response.IsSuccessStatusCode,
+            Response = body
         };
     }
 }
