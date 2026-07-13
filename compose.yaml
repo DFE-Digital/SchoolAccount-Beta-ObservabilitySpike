@@ -25,11 +25,32 @@
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
       Downstream__StudentRecordsBaseUrl: http://student-records-api:8080
+      Downstream__RubyServiceBaseUrl: http://ruby-service:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     depends_on:
       - otel-collector
       - student-records-api
+      - ruby-service
+
+  ruby-service:
+    image: ruby-service
+    build:
+      context: .
+      dockerfile: Ruby.Service/Dockerfile
+    ports:
+      - "5003:8080"
+    environment:
+      RACK_ENV: production
+      PORT: 8080
+      OTEL_SERVICE_NAME: ruby-service
+      OTEL_SERVICE_VERSION: spike-b
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,deployment.environment=local
+    depends_on:
+      - otel-collector
 
   school-account-api:
     image: school-account-api
