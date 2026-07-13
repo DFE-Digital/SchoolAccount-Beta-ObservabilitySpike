@@ -24,9 +24,7 @@ builder.Services.AddHttpClient<RubyServiceClient>(client =>
     client.BaseAddress = new Uri(
         builder.Configuration["Downstream:RubyServiceBaseUrl"]
         ?? "http://localhost:5003");
-
-    // Keep this longer than the normal/slow scenarios but shorter than the
-    // Ruby timeout endpoint so timeout failures are visible in the trace.
+    
     client.Timeout = TimeSpan.FromSeconds(5);
 });
 
@@ -267,8 +265,6 @@ app.MapGet("/api/collect/ruby-random-failure", async (
     return Results.Ok(new { service = "Collect.Api", scenario = "ruby-random-failure", downstream = ruby });
 });
 
-// Retain the original route name used by the Operations Console, but now it
-// calls a real unavailable/failing Ruby operation rather than a placeholder.
 app.MapGet("/api/collect/ruby-down", async (
     RubyServiceClient rubyServiceClient,
     CancellationToken cancellationToken) =>
