@@ -57,6 +57,49 @@ public class ObservabilityController(
         return Content(result, "application/json");
     }
 
+
+    [HttpGet("ruby")]
+    public async Task<IActionResult> GetRuby(CancellationToken cancellationToken)
+    {
+        var result = await collectClient.RubyAsync(cancellationToken);
+        return Content(result, "application/json");
+    }
+
+    [HttpGet("ruby-slow")]
+    public async Task<IActionResult> GetRubySlow(CancellationToken cancellationToken)
+    {
+        var result = await collectClient.RubySlowAsync(cancellationToken);
+        return Content(result, "application/json");
+    }
+
+    [HttpGet("ruby-error")]
+    public async Task<IActionResult> GetRubyError(CancellationToken cancellationToken)
+    {
+        var result = await collectClient.RubyErrorAsync(cancellationToken);
+        return Content(result, "application/json");
+    }
+
+    [HttpGet("ruby-timeout")]
+    public async Task<IActionResult> GetRubyTimeout(CancellationToken cancellationToken)
+    {
+        var result = await collectClient.RubyTimeoutAsync(cancellationToken);
+        return Content(result, "application/json");
+    }
+
+    [HttpGet("ruby-random-latency")]
+    public async Task<IActionResult> GetRubyRandomLatency(CancellationToken cancellationToken)
+    {
+        var result = await collectClient.RubyRandomLatencyAsync(cancellationToken);
+        return Content(result, "application/json");
+    }
+
+    [HttpGet("ruby-random-failure")]
+    public async Task<IActionResult> GetRubyRandomFailure(CancellationToken cancellationToken)
+    {
+        var result = await collectClient.RubyRandomFailureAsync(cancellationToken);
+        return Content(result, "application/json");
+    }
+
     [HttpGet("ruby-down")]
     public async Task<IActionResult> GetRubyDown(CancellationToken cancellationToken)
     {

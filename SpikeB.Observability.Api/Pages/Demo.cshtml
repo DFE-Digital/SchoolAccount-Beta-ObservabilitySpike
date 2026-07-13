@@ -12,7 +12,7 @@
     <header class="hero">
         <div>
             <h1>Spike B Observability Demo</h1>
-            <p>School Account → COLLECT → SQL</p>
+            <p>School Account → COLLECT → Student Records / Ruby / SQL</p>
         </div>
 
         <div class="header-status">
@@ -39,6 +39,13 @@
                 <label><input type="radio" name="scenario" value="error" /> Error</label>
                 <label><input type="radio" name="scenario" value="timeout" /> Timeout</label>
                 <label><input type="radio" name="scenario" value="sql-down" /> SQL Down</label>
+                <label><input type="radio" name="scenario" value="ruby" /> Ruby Normal</label>
+                <label><input type="radio" name="scenario" value="ruby-slow" /> Ruby Slow</label>
+                <label><input type="radio" name="scenario" value="ruby-error" /> Ruby Error</label>
+                <label><input type="radio" name="scenario" value="ruby-timeout" /> Ruby Timeout</label>
+                <label><input type="radio" name="scenario" value="ruby-random-latency" /> Ruby Random Latency</label>
+                <label><input type="radio" name="scenario" value="ruby-random-failure" /> Ruby Random Failure</label>
+                <label><input type="radio" name="scenario" value="chain" /> Full Cross-platform Chain</label>
                 <label><input type="radio" name="scenario" value="random" /> Random</label>
             </div>
 
@@ -83,4 +90,4 @@
 
 </div>
 
-<script src="~/demo.js?v=3"></script>
+<script src="~/demo.js?v=4"></script>

@@ -19,6 +19,17 @@ builder.Services.AddHttpClient<StudentRecordsClient>(client =>
         ?? "http://localhost:5040");
 });
 
+builder.Services.AddHttpClient<RubyServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(
+        builder.Configuration["Downstream:RubyServiceBaseUrl"]
+        ?? "http://localhost:5003");
+
+    // Keep this longer than the normal/slow scenarios but shorter than the
+    // Ruby timeout endpoint so timeout failures are visible in the trace.
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
+
 builder.Services
     .AddOpenTelemetry()
     .ConfigureResource(resource =>
@@ -192,20 +203,84 @@ app.MapGet("/api/collect/sql-down", async (
     });
 });
 
-app.MapGet("/api/collect/ruby-down", async (
+app.MapGet("/api/collect/ruby", async (
     IChaosService chaosService,
+    RubyServiceClient rubyServiceClient,
     CancellationToken cancellationToken) =>
 {
-    await chaosService.ExecuteAsync(
-        new ChaosRequest(ChaosMode.RubyDown),
-        cancellationToken);
+    await chaosService.ExecuteAsync(new ChaosRequest(ChaosMode.None), cancellationToken);
+    var ruby = await rubyServiceClient.NormalAsync(cancellationToken);
 
-    return Results.Ok();
+    return Results.Ok(new
+    {
+        service = "Collect.Api",
+        scenario = "ruby",
+        message = "COLLECT called the Ruby service successfully",
+        downstream = ruby
+    });
+});
+
+app.MapGet("/api/collect/ruby-slow", async (
+    RubyServiceClient rubyServiceClient,
+    CancellationToken cancellationToken) =>
+{
+    var ruby = await rubyServiceClient.SlowAsync(cancellationToken);
+
+    return Results.Ok(new
+    {
+        service = "Collect.Api",
+        scenario = "ruby-slow",
+        message = "COLLECT called a slow Ruby service",
+        downstream = ruby
+    });
+});
+
+app.MapGet("/api/collect/ruby-error", async (
+    RubyServiceClient rubyServiceClient,
+    CancellationToken cancellationToken) =>
+{
+    var ruby = await rubyServiceClient.ErrorAsync(cancellationToken);
+    return Results.Ok(new { service = "Collect.Api", scenario = "ruby-error", downstream = ruby });
+});
+
+app.MapGet("/api/collect/ruby-timeout", async (
+    RubyServiceClient rubyServiceClient,
+    CancellationToken cancellationToken) =>
+{
+    var ruby = await rubyServiceClient.TimeoutAsync(cancellationToken);
+    return Results.Ok(new { service = "Collect.Api", scenario = "ruby-timeout", downstream = ruby });
+});
+
+app.MapGet("/api/collect/ruby-random-latency", async (
+    RubyServiceClient rubyServiceClient,
+    CancellationToken cancellationToken) =>
+{
+    var ruby = await rubyServiceClient.RandomLatencyAsync(cancellationToken);
+    return Results.Ok(new { service = "Collect.Api", scenario = "ruby-random-latency", downstream = ruby });
+});
+
+app.MapGet("/api/collect/ruby-random-failure", async (
+    RubyServiceClient rubyServiceClient,
+    CancellationToken cancellationToken) =>
+{
+    var ruby = await rubyServiceClient.RandomFailureAsync(cancellationToken);
+    return Results.Ok(new { service = "Collect.Api", scenario = "ruby-random-failure", downstream = ruby });
+});
+
+// Retain the original route name used by the Operations Console, but now it
+// calls a real unavailable/failing Ruby operation rather than a placeholder.
+app.MapGet("/api/collect/ruby-down", async (
+    RubyServiceClient rubyServiceClient,
+    CancellationToken cancellationToken) =>
+{
+    var ruby = await rubyServiceClient.ErrorAsync(cancellationToken);
+    return Results.Ok(new { service = "Collect.Api", scenario = "ruby-down", downstream = ruby });
 });
 
 app.MapGet("/api/collect/chain", async (
     IChaosService chaosService,
     StudentRecordsClient studentRecordsClient,
+    RubyServiceClient rubyServiceClient,
     CancellationToken cancellationToken) =>
 {
     await chaosService.ExecuteAsync(
@@ -216,14 +291,15 @@ app.MapGet("/api/collect/chain", async (
         cancellationToken);
 
     var studentRecords = await studentRecordsClient.NormalAsync(cancellationToken);
+    var ruby = await rubyServiceClient.NormalAsync(cancellationToken);
 
     return Results.Ok(new
     {
         service = "Collect.Api",
         scenario = "chain",
-        message = "COLLECT chain endpoint called Student Records successfully",
-        downstream = studentRecords,
-        nextDependency = "Ruby.Service will be added in Phase 2"
+        message = "COLLECT called Student Records and Ruby successfully",
+        studentRecords,
+        ruby
     });
 });
 

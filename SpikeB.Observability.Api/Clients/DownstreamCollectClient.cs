@@ -23,6 +23,24 @@ public sealed class DownstreamCollectClient(HttpClient httpClient)
     public Task<string> DbDownAsync(CancellationToken cancellationToken) =>
         GetAsync("/api/collect/sql-down", cancellationToken);
 
+    public Task<string> RubyAsync(CancellationToken cancellationToken) =>
+        GetAsync("/api/collect/ruby", cancellationToken);
+
+    public Task<string> RubySlowAsync(CancellationToken cancellationToken) =>
+        GetAsync("/api/collect/ruby-slow", cancellationToken);
+
+    public Task<string> RubyErrorAsync(CancellationToken cancellationToken) =>
+        GetAsync("/api/collect/ruby-error", cancellationToken);
+
+    public Task<string> RubyTimeoutAsync(CancellationToken cancellationToken) =>
+        GetAsync("/api/collect/ruby-timeout", cancellationToken);
+
+    public Task<string> RubyRandomLatencyAsync(CancellationToken cancellationToken) =>
+        GetAsync("/api/collect/ruby-random-latency", cancellationToken);
+
+    public Task<string> RubyRandomFailureAsync(CancellationToken cancellationToken) =>
+        GetAsync("/api/collect/ruby-random-failure", cancellationToken);
+
     public Task<string> RubyDownAsync(CancellationToken cancellationToken) =>
         GetAsync("/api/collect/ruby-down", cancellationToken);
 
