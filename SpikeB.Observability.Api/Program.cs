@@ -21,8 +21,7 @@ builder.Services
     {
         client.BaseAddress =
             new Uri(builder.Configuration["Downstream:CollectBaseUrl"]!);
-
-        // Let Polly/resilience pipeline own timeout behaviour.
+        
         client.Timeout = Timeout.InfiniteTimeSpan;
     })
     .AddStandardResilienceHandler(options =>
