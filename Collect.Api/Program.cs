@@ -46,6 +46,7 @@ builder.Services
             })
             .AddHttpClientInstrumentation()
             .AddSource(ChaosDiagnostics.ActivitySourceName)
+            .AddSource(SqlDiagnostics.ActivitySourceName)
             .AddSqlClientInstrumentation(options =>
             {
                 options.RecordException = true;
@@ -184,20 +185,16 @@ app.MapGet("/api/collect/random-failure", async (
 });
 
 app.MapGet("/api/collect/sql-down", async (
-    IChaosService chaosService,
-    StudentRecordsClient studentRecordsClient,
+    ICollectSqlRepository sqlRepository,
     CancellationToken cancellationToken) =>
 {
-    await chaosService.ExecuteAsync(new ChaosRequest(ChaosMode.None), cancellationToken);
-
-    var studentRecords = await studentRecordsClient.SqlDownAsync(cancellationToken);
+    await sqlRepository.ExecuteNormalQueryAsync(cancellationToken);
 
     return Results.Ok(new
     {
         service = "Collect.Api",
         scenario = "sql-down",
-        message = "COLLECT called Student Records SQL down scenario",
-        downstream = studentRecords
+        message = "SQL query completed because SQL Server is available"
     });
 });
 
@@ -335,19 +332,6 @@ app.MapGet("/api/collect/sql/timeout", async (
     {
         Scenario = "sql-timeout",
         Message = "This should normally timeout before returning"
-    });
-});
-
-app.MapGet("/api/collect/sql/down", async (
-    ICollectSqlRepository sqlRepository,
-    CancellationToken cancellationToken) =>
-{
-    await sqlRepository.ExecuteNormalQueryAsync(cancellationToken);
-
-    return Results.Ok(new
-    {
-        Scenario = "sql-down",
-        Message = "This only succeeds if SQL Server is available"
     });
 });
 

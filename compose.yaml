@@ -15,7 +15,8 @@
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,deployment.environment=local
     depends_on:
-      - otel-collector
+      otel-collector:
+        condition: service_started
 
   collect-api:
     image: collect-api
@@ -27,17 +28,26 @@
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
+
       Downstream__StudentRecordsBaseUrl: http://student-records-api:8080
       Downstream__RubyServiceBaseUrl: http://ruby-service:8080
+
+      ConnectionStrings__CollectSql: Server=sql,1433;Database=master;User Id=sa;Password=Observability!2026;Encrypt=True;TrustServerCertificate=True;Connect Timeout=3
+
       OTEL_SERVICE_NAME: collect-api
       OTEL_SERVICE_VERSION: spike-b
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,deployment.environment=local
     depends_on:
-      - otel-collector
-      - student-records-api
-      - ruby-service
+      otel-collector:
+        condition: service_started
+      student-records-api:
+        condition: service_started
+      ruby-service:
+        condition: service_started
+      sql:
+        condition: service_healthy
 
   ruby-service:
     image: ruby-service
@@ -54,13 +64,14 @@
       OTEL_SERVICE_VERSION: spike-b
       OTEL_TRACES_EXPORTER: otlp
 
-      # Ruby OTLP exporter uses HTTP/protobuf, not gRPC.
+      # Ruby OTLP exporter uses HTTP/protobuf.
       OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
 
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,deployment.environment=local
     depends_on:
-      - otel-collector
+      otel-collector:
+        condition: service_started
 
   school-account-api:
     image: school-account-api
@@ -73,14 +84,41 @@
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
       Downstream__CollectBaseUrl: http://collect-api:8080
+
       OTEL_SERVICE_NAME: school-account-api
       OTEL_SERVICE_VERSION: spike-b
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,deployment.environment=local
     depends_on:
-      - collect-api
-      - otel-collector
+      collect-api:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: observability-sql
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Observability!2026"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          /opt/mssql-tools18/bin/sqlcmd
+          -S localhost
+          -U sa
+          -P 'Observability!2026'
+          -C
+          -Q 'SELECT 1'
+          || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
@@ -93,7 +131,8 @@
       - "4318:4318"
       - "8889:8889"
     depends_on:
-      - tempo
+      tempo:
+        condition: service_started
 
   tempo:
     image: grafana/tempo:2.6.1
@@ -114,7 +153,8 @@
     ports:
       - "9090:9090"
     depends_on:
-      - otel-collector
+      otel-collector:
+        condition: service_started
 
   grafana:
     image: grafana/grafana:latest
@@ -126,5 +166,7 @@
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
     depends_on:
-      - tempo
-      - prometheus
+      tempo:
+        condition: service_started
+      prometheus:
+        condition: service_started
