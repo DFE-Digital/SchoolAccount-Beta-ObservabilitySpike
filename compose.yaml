@@ -9,8 +9,11 @@
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
+      OTEL_SERVICE_NAME: student-records-api
+      OTEL_SERVICE_VERSION: spike-b
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,deployment.environment=local
     depends_on:
       - otel-collector
 
@@ -26,8 +29,11 @@
       ASPNETCORE_ENVIRONMENT: Development
       Downstream__StudentRecordsBaseUrl: http://student-records-api:8080
       Downstream__RubyServiceBaseUrl: http://ruby-service:8080
+      OTEL_SERVICE_NAME: collect-api
+      OTEL_SERVICE_VERSION: spike-b
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,deployment.environment=local
     depends_on:
       - otel-collector
       - student-records-api
@@ -43,11 +49,15 @@
     environment:
       RACK_ENV: production
       PORT: 8080
+
       OTEL_SERVICE_NAME: ruby-service
       OTEL_SERVICE_VERSION: spike-b
       OTEL_TRACES_EXPORTER: otlp
+
+      # Ruby OTLP exporter uses HTTP/protobuf, not gRPC.
       OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,deployment.environment=local
     depends_on:
       - otel-collector
@@ -63,15 +73,19 @@
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
       Downstream__CollectBaseUrl: http://collect-api:8080
+      OTEL_SERVICE_NAME: school-account-api
+      OTEL_SERVICE_VERSION: spike-b
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,deployment.environment=local
     depends_on:
       - collect-api
       - otel-collector
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
-    command: [ "--config=/etc/otelcol/config.yaml" ]
+    command:
+      - "--config=/etc/otelcol/config.yaml"
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol/config.yaml
     ports:
@@ -83,7 +97,8 @@
 
   tempo:
     image: grafana/tempo:2.6.1
-    command: [ "-config.file=/etc/tempo.yaml" ]
+    command:
+      - "-config.file=/etc/tempo.yaml"
     volumes:
       - ./tempo.yaml:/etc/tempo.yaml
     ports:

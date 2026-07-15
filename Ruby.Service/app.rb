@@ -2,7 +2,6 @@
 
 require_relative "telemetry"
 require "json"
-require "sinatra/base"
 
 class RubyService < Sinatra::Base
   configure do
