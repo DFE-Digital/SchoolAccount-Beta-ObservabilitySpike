@@ -29,7 +29,7 @@ curl -sf -u "$AUTH" -H 'Content-Type: application/json' -X POST "$REPO_API" -d '
     "type": "local",
     "local": {"path": "dashboards/"},
     "workflows": ["write"],
-    "sync": {"enabled": true, "target": "folderless", "intervalSeconds": 60}
+    "sync": {"enabled": true, "target": "folder", "intervalSeconds": 60}
   }
 }' >/dev/null
 

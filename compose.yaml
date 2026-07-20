@@ -172,6 +172,7 @@
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./dashboards:/usr/share/grafana/dashboards
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
     depends_on:
       tempo:
         condition: service_started
