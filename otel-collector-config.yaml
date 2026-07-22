@@ -14,16 +14,28 @@ exporters:
       
   prometheus:
     endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
 
   debug:
     verbosity: detailed
+    
+processors:
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: local
+        action: upsert
+  batch: {}
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
+      processors: [resource, batch]
       exporters: [otlp/tempo, debug]
       
     metrics:
       receivers: [otlp]
+      processors: [resource, batch]
       exporters: [prometheus, debug]

@@ -1,6 +1,7 @@
 using Collect.Api.Chaos;
 using Collect.Api.Clients;
 using Collect.Api.Data;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -30,6 +31,9 @@ builder.Services.AddHttpClient<RubyServiceClient>(client =>
 
 builder.Services
     .AddOpenTelemetry()
+    .WithMetrics(m => m
+        .AddAspNetCoreInstrumentation()
+        .AddOtlpExporter())
     .ConfigureResource(resource =>
     {
         resource.AddService(

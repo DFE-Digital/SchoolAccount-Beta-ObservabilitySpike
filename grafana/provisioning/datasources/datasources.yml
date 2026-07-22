@@ -17,4 +17,9 @@ datasources:
     type: prometheus
     access: proxy
     url: http://prometheus:9090
-    jsonData:
+      
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
