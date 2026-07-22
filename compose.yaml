@@ -223,11 +223,11 @@
         i=0
         while true; do
           i=$$((i + 1))
-          curl -s http://student-records-api:8080/api/collect/normal > /dev/null
-          curl -s http://student-records-api:8080/api/collect/slow > /dev/null
-          curl -s http://student-records-api:8080/api/collect/timeout > /dev/null
-          curl -s http://student-records-api:8080/api/collect/sql-down > /dev/null
-          if [ $$((i % 5)) = 0 ]; then curl -s http://student-records-api:8080/api/collect/error > /dev/null; fi
+          curl -s http://student-records-api:8080/api/student-records/normal > /dev/null
+          curl -s http://student-records-api:8080/api/student-records/slow > /dev/null
+          curl -s http://student-records-api:8080/api/student-records/timeout > /dev/null
+          curl -s http://student-records-api:8080/api/student-records/sql-down > /dev/null
+          if [ $$((i % 5)) = 0 ]; then curl -s http://student-records-api:8080/api/student-records/error > /dev/null; fi
           sleep 2
         done
     restart: unless-stopped
