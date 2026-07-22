@@ -193,7 +193,7 @@
     entrypoint: [ "/bin/sh", "/create-repository.sh" ]
     restart: "no"
     
-  traffic:
+  collect-traffic:
     image: curlimages/curl:8.13.0
     depends_on:
       - collect-api
@@ -208,6 +208,26 @@
           curl -s http://collect-api:8080/api/collect/slow > /dev/null
           curl -s http://collect-api:8080/api/collect/timeout > /dev/null
           if [ $$((i % 5)) = 0 ]; then curl -s http://collect-api:8080/api/collect/error > /dev/null; fi
+          sleep 2
+        done
+    restart: unless-stopped
+    
+  student-records-traffic:
+    image: curlimages/curl:8.13.0
+    depends_on:
+      - student-records-api
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        i=0
+        while true; do
+          i=$$((i + 1))
+          curl -s http://student-records-api:8080/api/collect/normal > /dev/null
+          curl -s http://student-records-api:8080/api/collect/slow > /dev/null
+          curl -s http://student-records-api:8080/api/collect/timeout > /dev/null
+          curl -s http://student-records-api:8080/api/collect/sql-down > /dev/null
+          if [ $$((i % 5)) = 0 ]; then curl -s http://student-records-api:8080/api/collect/error > /dev/null; fi
           sleep 2
         done
     restart: unless-stopped

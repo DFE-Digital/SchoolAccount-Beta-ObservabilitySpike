@@ -1,3 +1,4 @@
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -8,6 +9,9 @@ builder.Services.AddSwaggerGen();
 
 builder.Services
     .AddOpenTelemetry()
+    .WithMetrics(m => m
+        .AddAspNetCoreInstrumentation()
+        .AddOtlpExporter())
     .ConfigureResource(resource =>
     {
         resource.AddService(
