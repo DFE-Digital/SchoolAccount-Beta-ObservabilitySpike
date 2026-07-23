@@ -1,5 +1,6 @@
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Microsoft.Extensions.Http.Resilience;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using SpikeB.Observability.Api;
@@ -40,6 +41,9 @@ builder.Services
 
 builder.Services
     .AddOpenTelemetry()
+    .WithMetrics(m => m
+        .AddAspNetCoreInstrumentation()
+        .AddOtlpExporter())
     .ConfigureResource(resource =>
     {
         resource.AddService(
