@@ -11,6 +11,9 @@ builder.Services
     .AddOpenTelemetry()
     .WithMetrics(m => m
         .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddProcessInstrumentation()
         .AddOtlpExporter())
     .ConfigureResource(resource =>
     {

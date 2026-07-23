@@ -1,5 +1,5 @@
 using Azure.Monitor.OpenTelemetry.Exporter;
-using Microsoft.Extensions.Http.Resilience;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -7,6 +7,14 @@ using SpikeB.Observability.Api;
 using SpikeB.Observability.Api.Clients;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var resourceBuilder = ResourceBuilder.CreateDefault()
+    .AddService("school-account-api", serviceVersion: "spike-b")
+    .AddAttributes(new KeyValuePair<string, object>[]
+    {
+        new("deployment.environment", "local"),
+        new("host.name", Environment.MachineName),
+    });
 
 var appInsightsConnectionString =
     builder.Configuration["ApplicationInsights:ConnectionString"];
@@ -43,6 +51,9 @@ builder.Services
     .AddOpenTelemetry()
     .WithMetrics(m => m
         .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddProcessInstrumentation()
         .AddOtlpExporter())
     .ConfigureResource(resource =>
     {
