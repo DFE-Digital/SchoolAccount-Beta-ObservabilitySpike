@@ -6,17 +6,37 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 
+connectors:
+  span_metrics:
+    metrics_flush_interval: 5s
+
+    histogram:
+      unit: ms
+      explicit:
+        buckets:
+          - 5ms
+          - 10ms
+          - 25ms
+          - 50ms
+          - 100ms
+          - 250ms
+          - 500ms
+          - 1s
+          - 2s
+          - 5s
+          - 10s
+
 exporters:
   otlp/tempo:
     endpoint: tempo:4317
     tls:
       insecure: true
-      
+
   otlphttp/loki:
     endpoint: http://loki:3100/otlp
     tls:
       insecure: true
-      
+
   prometheus:
     endpoint: 0.0.0.0:8889
     resource_to_telemetry_conversion:
@@ -24,13 +44,14 @@ exporters:
 
   debug:
     verbosity: detailed
-    
+
 processors:
   resource:
     attributes:
       - key: deployment.environment
         value: local
         action: upsert
+
   batch: {}
 
 service:
@@ -38,14 +59,23 @@ service:
     traces:
       receivers: [otlp]
       processors: [resource, batch]
-      exporters: [otlp/tempo, debug]
-      
+      exporters:
+        - otlp/tempo
+        - span_metrics
+        - debug
+
     metrics:
-      receivers: [otlp]
+      receivers:
+        - otlp
+        - span_metrics
       processors: [resource, batch]
-      exporters: [prometheus, debug]
-      
+      exporters:
+        - prometheus
+        - debug
+
     logs:
       receivers: [otlp]
       processors: [resource, batch]
-      exporters: [otlphttp/loki, debug]
+      exporters:
+        - otlphttp/loki
+        - debug

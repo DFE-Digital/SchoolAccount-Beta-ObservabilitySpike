@@ -9,13 +9,16 @@
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
+
       OTEL_SERVICE_NAME: student-records-api
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
-      OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b, service.version=spike-b
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,service.version=spike-b
+
     depends_on:
       otel-collector:
         condition: service_started
+
 
   collect-api:
     image: collect-api
@@ -36,7 +39,8 @@
       OTEL_SERVICE_NAME: collect-api
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
-      OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b, service.version=spike-b
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,service.version=spike-b
+
     depends_on:
       otel-collector:
         condition: service_started
@@ -46,6 +50,7 @@
         condition: service_started
       sql:
         condition: service_healthy
+
 
   ruby-service:
     image: ruby-service
@@ -65,10 +70,12 @@
       OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
 
-      OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b, service.version=spike-b
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,service.version=spike-b
+
     depends_on:
       otel-collector:
         condition: service_started
+
 
   school-account-api:
     image: school-account-api
@@ -80,17 +87,20 @@
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
+
       Downstream__CollectBaseUrl: http://collect-api:8080
 
       OTEL_SERVICE_NAME: school-account-api
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,service.version=spike-b,deployment.environment=local,host.name=school-account-api
+
     depends_on:
       collect-api:
         condition: service_started
       otel-collector:
         condition: service_started
+
 
   sql:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -100,6 +110,7 @@
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "Observability!2026"
+
     healthcheck:
       test:
         - CMD-SHELL
@@ -116,6 +127,7 @@
       retries: 10
       start_period: 30s
 
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     command:
@@ -126,9 +138,11 @@
       - "4317:4317"
       - "4318:4318"
       - "8889:8889"
+
     depends_on:
       tempo:
         condition: service_started
+
 
   tempo:
     image: grafana/tempo:2.6.1
@@ -139,6 +153,7 @@
     ports:
       - "3200:3200"
 
+
   prometheus:
     image: prom/prometheus:latest
     command:
@@ -148,14 +163,17 @@
       - ./prometheus.yaml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "9090:9090"
+
     depends_on:
       otel-collector:
         condition: service_started
-  
+
+
   loki:
     image: grafana/loki:3.5.0
     ports:
       - "3100:3100"
+
 
   grafana:
     image: grafana/grafana:latest
@@ -164,70 +182,123 @@
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
+
       GF_FEATURE_TOGGLES_ENABLE: provisioning,kubernetesDashboards
       GF_PATHS_PERMITTED_PROVISIONING_PATHS: dashboards/
-      # Removes need to log in
+
+      # Removes need to log in.
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
+
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./dashboards:/usr/share/grafana/dashboards
       - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+
     depends_on:
       tempo:
         condition: service_started
       prometheus:
         condition: service_started
-  
+
+
   provisioning-setup:
     image: curlimages/curl:8.13.0
+
     depends_on:
       - grafana
+
     environment:
       GRAFANA_URL: http://grafana:3000
       GRAFANA_USER: admin
       GRAFANA_PASSWORD: admin
+
     volumes:
       - ./setup/create-repository.sh:/create-repository.sh:ro
-    entrypoint: [ "/bin/sh", "/create-repository.sh" ]
+
+    entrypoint: ["/bin/sh", "/create-repository.sh"]
     restart: "no"
-    
+
+
   collect-traffic:
     image: curlimages/curl:8.13.0
+
     depends_on:
       - collect-api
+
     entrypoint:
       - /bin/sh
       - -c
       - |
         i=0
+
         while true; do
           i=$$((i + 1))
+
           curl -s http://collect-api:8080/api/collect/normal > /dev/null
           curl -s http://collect-api:8080/api/collect/slow > /dev/null
           curl -s http://collect-api:8080/api/collect/timeout > /dev/null
-          if [ $$((i % 5)) = 0 ]; then curl -s http://collect-api:8080/api/collect/error > /dev/null; fi
+
+          if [ $$((i % 5)) = 0 ]; then
+            curl -s http://collect-api:8080/api/collect/error > /dev/null
+          fi
+
           sleep 2
         done
+
     restart: unless-stopped
-    
+
+
   student-records-traffic:
     image: curlimages/curl:8.13.0
+
     depends_on:
       - student-records-api
+
     entrypoint:
       - /bin/sh
       - -c
       - |
         i=0
+
         while true; do
           i=$$((i + 1))
+
           curl -s http://student-records-api:8080/api/student-records/normal > /dev/null
           curl -s http://student-records-api:8080/api/student-records/slow > /dev/null
           curl -s http://student-records-api:8080/api/student-records/timeout > /dev/null
           curl -s http://student-records-api:8080/api/student-records/sql-down > /dev/null
-          if [ $$((i % 5)) = 0 ]; then curl -s http://student-records-api:8080/api/student-records/error > /dev/null; fi
+
+          if [ $$((i % 5)) = 0 ]; then
+            curl -s http://student-records-api:8080/api/student-records/error > /dev/null
+          fi
+
           sleep 2
         done
+
+    restart: unless-stopped
+
+
+  ruby-traffic:
+    image: curlimages/curl:8.13.0
+
+    depends_on:
+      - ruby-service
+
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        i=0
+
+        while true; do
+          i=$$((i + 1))
+
+          curl -s http://ruby-service:8080/api/ruby/normal > /dev/null
+          curl -s http://ruby-service:8080/api/ruby/slow > /dev/null
+
+          sleep 2
+        done
+
     restart: unless-stopped
