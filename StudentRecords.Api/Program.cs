@@ -1,8 +1,17 @@
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var resourceBuilder = ResourceBuilder.CreateDefault()
+    .AddService("student-records-api", serviceVersion: "spike-b")
+    .AddAttributes(new KeyValuePair<string, object>[]
+    {
+        new("deployment.environment", "local"),
+        new("host.name", Environment.MachineName),
+    });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -34,6 +43,12 @@ builder.Services
             .AddOtlpExporter();
     });
 
+builder.Logging.AddOpenTelemetry(logging =>
+{
+    logging.SetResourceBuilder(resourceBuilder);
+    logging.AddOtlpExporter();
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -42,8 +57,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapGet("/api/student-records/normal", () =>
+app.MapGet("/api/student-records/normal", (ILogger<Program> logger) =>
 {
+    logger.LogInformation("Completed student-records-api normal endpoint call");
+    
     return Results.Ok(new
     {
         service = "StudentRecords.Api",
@@ -52,9 +69,11 @@ app.MapGet("/api/student-records/normal", () =>
     });
 });
 
-app.MapGet("/api/student-records/slow", async (CancellationToken cancellationToken) =>
+app.MapGet("/api/student-records/slow", async (ILogger<Program> logger, CancellationToken cancellationToken) =>
 {
     await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+    
+    logger.LogInformation("Completed student-records-api slow endpoint call");
 
     return Results.Ok(new
     {
@@ -64,23 +83,29 @@ app.MapGet("/api/student-records/slow", async (CancellationToken cancellationTok
     });
 });
 
-app.MapGet("/api/student-records/error", () =>
+app.MapGet("/api/student-records/error", (ILogger<Program> logger) =>
 {
+    logger.LogInformation("Completed student-records-api error endpoint call");
+    
     return Results.Problem(
         detail: "Student records dependency failed",
         statusCode: StatusCodes.Status500InternalServerError);
 });
 
-app.MapGet("/api/student-records/sql-down", () =>
+app.MapGet("/api/student-records/sql-down", (ILogger<Program> logger) =>
 {
+    logger.LogInformation("Completed student-records-api sql-down endpoint call");
+    
     return Results.Problem(
         detail: "SQL Server is unavailable",
         statusCode: StatusCodes.Status500InternalServerError);
 });
 
-app.MapGet("/api/student-records/timeout", async (CancellationToken cancellationToken) =>
+app.MapGet("/api/student-records/timeout", async (ILogger<Program> logger, CancellationToken cancellationToken) =>
 {
     await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+    
+    logger.LogInformation("Completed student-records-api timeout endpoint call");
 
     return Results.Ok(new
     {

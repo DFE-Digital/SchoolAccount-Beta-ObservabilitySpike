@@ -12,6 +12,11 @@ exporters:
     tls:
       insecure: true
       
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+      
   prometheus:
     endpoint: 0.0.0.0:8889
     resource_to_telemetry_conversion:
@@ -39,3 +44,8 @@ service:
       receivers: [otlp]
       processors: [resource, batch]
       exporters: [prometheus, debug]
+      
+    logs:
+      receivers: [otlp]
+      processors: [resource, batch]
+      exporters: [otlphttp/loki, debug]

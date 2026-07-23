@@ -8,14 +8,6 @@ using SpikeB.Observability.Api.Clients;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var resourceBuilder = ResourceBuilder.CreateDefault()
-    .AddService("school-account-api", serviceVersion: "spike-b")
-    .AddAttributes(new KeyValuePair<string, object>[]
-    {
-        new("deployment.environment", "local"),
-        new("host.name", Environment.MachineName),
-    });
-
 var appInsightsConnectionString =
     builder.Configuration["ApplicationInsights:ConnectionString"];
 
