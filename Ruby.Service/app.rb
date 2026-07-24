@@ -77,8 +77,21 @@ class RubyService < Sinatra::Base
   end
 
   get "/api/ruby/error" do
-    scenario_span("error") do
-      raise StandardError, "Simulated Ruby service failure"
+    scenario_span("error") do |span|
+      exception = StandardError.new("Simulated Ruby service failure")
+  
+      span.record_exception(exception)
+      span.status = OpenTelemetry::Trace::Status.error(exception.message)
+      span.set_attribute("error.type", exception.class.name)
+  
+      status 500
+  
+      json(
+        scenario: "error",
+        success: false,
+        error: exception.class.name,
+        message: exception.message
+      )
     end
   end
 
@@ -116,24 +129,39 @@ class RubyService < Sinatra::Base
   end
 
   get "/api/ruby/random-failure" do
-    failure_percentage =
-      bounded_integer("failurePercentage", 40, 0, 100)
-
+    failure_percentage = bounded_integer("failurePercentage", 40, 0, 100)
     failed = rand(1..100) <= failure_percentage
-
+  
     scenario_span(
       "random-failure",
       "demo.failure_percentage" => failure_percentage,
       "demo.failure_triggered" => failed
-    ) do
-      raise StandardError, "Random Ruby failure was triggered" if failed
-
-      json(
-        scenario: "random-failure",
-        success: true,
-        failurePercentage: failure_percentage,
-        message: "Ruby service completed without triggering a failure"
-      )
+    ) do |span|
+  
+      if failed
+        exception = StandardError.new("Random Ruby failure was triggered")
+  
+        span.record_exception(exception)
+        span.status = OpenTelemetry::Trace::Status.error(exception.message)
+        span.set_attribute("error.type", exception.class.name)
+  
+        status 500
+  
+        json(
+          scenario: "random-failure",
+          success: false,
+          failurePercentage: failure_percentage,
+          error: exception.class.name,
+          message: exception.message
+        )
+      else
+        json(
+          scenario: "random-failure",
+          success: true,
+          failurePercentage: failure_percentage,
+          message: "Ruby service completed without triggering a failure"
+        )
+      end
     end
   end
 
