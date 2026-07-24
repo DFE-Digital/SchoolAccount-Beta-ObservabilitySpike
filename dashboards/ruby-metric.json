@@ -114,7 +114,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.1.0"
+            "version": "13.1.1"
           }
         }
       },
@@ -205,7 +205,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.1.0"
+            "version": "13.1.1"
           }
         }
       },
@@ -296,7 +296,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.1.0"
+            "version": "13.1.1"
           }
         }
       },
@@ -419,7 +419,116 @@
                 }
               }
             },
-            "version": "13.1.0"
+            "version": "13.1.1"
+          }
+        }
+      },
+      "panel-5": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(\n  rate(\n    traces_span_metrics_duration_milliseconds_bucket{\n      service_name=\"ruby-service\",\n      span_kind=\"SPAN_KIND_SERVER\"\n    }[$__rate_interval]\n  )\n) by (le)",
+                        "format": "heatmap",
+                        "instant": false,
+                        "legendFormat": "__auto",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "A"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "",
+          "id": 5,
+          "links": [],
+          "title": "Response time",
+          "vizConfig": {
+            "group": "heatmap",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "custom": {
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "scaleDistribution": {
+                      "type": "linear"
+                    }
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "annotations": {
+                  "clustering": -1,
+                  "multiLane": false
+                },
+                "calculate": false,
+                "cellGap": 1,
+                "cellValues": {
+                  "unit": "reqps"
+                },
+                "color": {
+                  "exponent": 0.5,
+                  "fill": "dark-orange",
+                  "mode": "scheme",
+                  "reverse": true,
+                  "scale": "exponential",
+                  "scheme": "Blues",
+                  "steps": 64
+                },
+                "exemplars": {
+                  "color": "rgba(255,0,255,0.7)"
+                },
+                "filterValues": {
+                  "le": 1e-9
+                },
+                "legend": {
+                  "show": true
+                },
+                "rowsFrame": {
+                  "layout": "auto",
+                  "yBucketScale": {
+                    "log": 2,
+                    "type": "log"
+                  }
+                },
+                "tooltip": {
+                  "mode": "single",
+                  "showColorScale": false,
+                  "yHistogram": false
+                },
+                "yAxis": {
+                  "axisPlacement": "left",
+                  "reverse": false,
+                  "unit": "ms"
+                }
+              }
+            },
+            "version": "13.1.1"
           }
         }
       }
@@ -479,6 +588,19 @@
               "x": 18,
               "y": 0
             }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-5"
+              },
+              "height": 7,
+              "width": 12,
+              "x": 12,
+              "y": 6
+            }
           }
         ]
       }
@@ -510,7 +632,7 @@
         "1d"
       ],
       "fiscalYearStartMonth": 0,
-      "from": "now-6h",
+      "from": "now-30m",
       "hideTimepicker": false,
       "timezone": "browser",
       "to": "now"
