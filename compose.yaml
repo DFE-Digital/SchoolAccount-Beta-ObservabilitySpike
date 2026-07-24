@@ -6,6 +6,7 @@
       dockerfile: StudentRecords.Api/Dockerfile
     ports:
       - "5040:8080"
+
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
@@ -27,6 +28,7 @@
       dockerfile: Collect.Api/Dockerfile
     ports:
       - "5002:8080"
+
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
@@ -50,28 +52,41 @@
         condition: service_started
       sql:
         condition: service_healthy
-
-
+  
+  
   ruby-service:
     image: ruby-service
     build:
       context: .
       dockerfile: Ruby.Service/Dockerfile
+    
     ports:
       - "5003:8080"
+    
     environment:
       RACK_ENV: production
       PORT: 8080
-
+      
       OTEL_SERVICE_NAME: ruby-service
       OTEL_TRACES_EXPORTER: otlp
-
-      # Ruby OTLP exporter uses HTTP/protobuf.
       OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=spike-b,service.version=spike-b
-
+    
+    volumes:
+      - ruby-logs:/var/log/ruby
+    
+    command:
+      - /bin/sh
+      - -c
+      - |
+        bundle exec puma \
+          --bind tcp://0.0.0.0:8080 \
+          --workers 1 \
+          --threads 1:5 \
+          config.ru \
+          2>&1 | tee -a /var/log/ruby/ruby-service.log
+    
     depends_on:
       otel-collector:
         condition: service_started
@@ -84,6 +99,7 @@
       dockerfile: SpikeB.Observability.Api/Dockerfile
     ports:
       - "5032:8080"
+
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
@@ -107,6 +123,7 @@
     container_name: observability-sql
     ports:
       - "1433:1433"
+
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "Observability!2026"
@@ -130,10 +147,14 @@
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
+
     command:
       - "--config=/etc/otelcol/config.yaml"
+
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol/config.yaml
+      - ruby-logs:/var/log/ruby:ro
+
     ports:
       - "4317:4317"
       - "4318:4318"
@@ -146,21 +167,27 @@
 
   tempo:
     image: grafana/tempo:2.6.1
+
     command:
       - "-config.file=/etc/tempo.yaml"
+
     volumes:
       - ./tempo.yaml:/etc/tempo.yaml
+
     ports:
       - "3200:3200"
 
 
   prometheus:
     image: prom/prometheus:latest
+
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--web.enable-remote-write-receiver"
+
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+
     ports:
       - "9090:9090"
 
@@ -177,8 +204,10 @@
 
   grafana:
     image: grafana/grafana:latest
+
     ports:
       - "3000:3000"
+
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
@@ -217,5 +246,12 @@
     volumes:
       - ./setup/create-repository.sh:/create-repository.sh:ro
 
-    entrypoint: ["/bin/sh", "/create-repository.sh"]
+    entrypoint:
+      - "/bin/sh"
+      - "/create-repository.sh"
+
     restart: "no"
+
+
+volumes:
+  ruby-logs:

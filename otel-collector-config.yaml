@@ -6,6 +6,22 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 
+  filelog/ruby:
+    include:
+      - /var/log/ruby/*.log
+
+    start_at: beginning
+
+    operators:
+      - type: add
+        field: resource["service.name"]
+        value: ruby-service
+
+      - type: add
+        field: resource["service.namespace"]
+        value: spike-b
+
+
 connectors:
   span_metrics:
     metrics_flush_interval: 5s
@@ -26,6 +42,7 @@ connectors:
           - 5s
           - 10s
 
+
 exporters:
   otlp/tempo:
     endpoint: tempo:4317
@@ -45,6 +62,7 @@ exporters:
   debug:
     verbosity: detailed
 
+
 processors:
   resource:
     attributes:
@@ -54,11 +72,15 @@ processors:
 
   batch: {}
 
+
 service:
   pipelines:
     traces:
-      receivers: [otlp]
-      processors: [resource, batch]
+      receivers:
+        - otlp
+      processors:
+        - resource
+        - batch
       exporters:
         - otlp/tempo
         - span_metrics
@@ -68,14 +90,20 @@ service:
       receivers:
         - otlp
         - span_metrics
-      processors: [resource, batch]
+      processors:
+        - resource
+        - batch
       exporters:
         - prometheus
         - debug
 
     logs:
-      receivers: [otlp]
-      processors: [resource, batch]
+      receivers:
+        - otlp
+        - filelog/ruby
+      processors:
+        - resource
+        - batch
       exporters:
         - otlphttp/loki
         - debug

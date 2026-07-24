@@ -27,13 +27,11 @@ COPY Ruby.Service/app.rb \
      Ruby.Service/telemetry.rb \
      ./
 
+RUN mkdir -p /var/log/ruby
+
 ENV RACK_ENV=production
 ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["bundle", "exec", "puma", \
-     "--bind", "tcp://0.0.0.0:8080", \
-     "--workers", "1", \
-     "--threads", "1:5", \
-     "config.ru"]
+CMD ["bundle", "exec", "puma", "--bind", "tcp://0.0.0.0:8080", "--workers", "1", "--threads", "1:5", "config.ru"]
