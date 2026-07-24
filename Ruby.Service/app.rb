@@ -11,7 +11,29 @@ class RubyService < Sinatra::Base
     set :raise_errors, false
   end
 
-  before { content_type :json }
+  before do
+    content_type :json
+    @request_started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  end
+
+  after do
+    duration_ms =
+      ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - @request_started_at) * 1000).round
+
+    failed = response.status >= 500
+
+    level = failed ? "ERROR" : "INFO"
+    outcome = failed ? "failed" : "completed"
+
+    puts(
+      "#{level} " \
+      "#{request.request_method} " \
+      "#{request.path} " \
+      "#{outcome} " \
+      "#{response.status} " \
+      "in #{duration_ms}ms"
+    )
+  end
 
   get "/health" do
     json(status: "healthy", service: "ruby-service")
@@ -20,7 +42,12 @@ class RubyService < Sinatra::Base
   get "/api/ruby/normal" do
     scenario_span("normal") do |span|
       span.add_event("ruby.work.completed")
-      json(scenario: "normal", success: true, message: "Ruby service completed normally")
+
+      json(
+        scenario: "normal",
+        success: true,
+        message: "Ruby service completed normally"
+      )
     end
   end
 
@@ -28,9 +55,17 @@ class RubyService < Sinatra::Base
     delay_ms = bounded_integer("delayMs", 2_000, 100, 15_000)
 
     scenario_span("slow", "demo.delay_ms" => delay_ms) do |span|
-      span.add_event("ruby.delay.started", attributes: { "delay.ms" => delay_ms })
+      span.add_event(
+        "ruby.delay.started",
+        attributes: { "delay.ms" => delay_ms }
+      )
+
       sleep(delay_ms / 1000.0)
-      span.add_event("ruby.delay.completed", attributes: { "delay.ms" => delay_ms })
+
+      span.add_event(
+        "ruby.delay.completed",
+        attributes: { "delay.ms" => delay_ms }
+      )
 
       json(
         scenario: "slow",
@@ -52,21 +87,38 @@ class RubyService < Sinatra::Base
 
     scenario_span("timeout", "demo.delay_ms" => delay_ms) do
       sleep(delay_ms / 1000.0)
-      json(scenario: "timeout", success: true, delayMs: delay_ms, message: "Ruby timeout delay completed")
+
+      json(
+        scenario: "timeout",
+        success: true,
+        delayMs: delay_ms,
+        message: "Ruby timeout delay completed"
+      )
     end
   end
 
   get "/api/ruby/random-latency" do
     delay_ms = rand(250..4_000)
 
-    scenario_span("random-latency", "demo.delay_ms" => delay_ms) do
+    scenario_span(
+      "random-latency",
+      "demo.delay_ms" => delay_ms
+    ) do
       sleep(delay_ms / 1000.0)
-      json(scenario: "random-latency", success: true, delayMs: delay_ms, message: "Ruby service returned with random latency")
+
+      json(
+        scenario: "random-latency",
+        success: true,
+        delayMs: delay_ms,
+        message: "Ruby service returned with random latency"
+      )
     end
   end
 
   get "/api/ruby/random-failure" do
-    failure_percentage = bounded_integer("failurePercentage", 40, 0, 100)
+    failure_percentage =
+      bounded_integer("failurePercentage", 40, 0, 100)
+
     failed = rand(1..100) <= failure_percentage
 
     scenario_span(
@@ -87,7 +139,12 @@ class RubyService < Sinatra::Base
 
   not_found do
     status 404
-    json(success: false, error: "Route not found", path: request.path)
+
+    json(
+      success: false,
+      error: "Route not found",
+      path: request.path
+    )
   end
 
   error do
@@ -101,6 +158,7 @@ class RubyService < Sinatra::Base
     end
 
     status 500
+
     json(
       success: false,
       error: exception&.class&.name || "UnknownError",
@@ -111,7 +169,10 @@ class RubyService < Sinatra::Base
   private
 
   def tracer
-    OpenTelemetry.tracer_provider.tracer("ruby-service.scenarios", ENV.fetch("OTEL_SERVICE_VERSION", "spike-b"))
+    OpenTelemetry.tracer_provider.tracer(
+      "ruby-service.scenarios",
+      ENV.fetch("OTEL_SERVICE_VERSION", "spike-b")
+    )
   end
 
   def scenario_span(scenario, attributes = {})
@@ -121,7 +182,9 @@ class RubyService < Sinatra::Base
         "demo.scenario" => scenario,
         "service.component" => "ruby-scenario-engine"
       }.merge(attributes)
-    ) { |span| yield span }
+    ) do |span|
+      yield span
+    end
   end
 
   def bounded_integer(name, default, minimum, maximum)
@@ -130,6 +193,8 @@ class RubyService < Sinatra::Base
   end
 
   def json(payload)
-    JSON.generate(payload.merge(service: "ruby-service"))
+    JSON.generate(
+      payload.merge(service: "ruby-service")
+    )
   end
 end
